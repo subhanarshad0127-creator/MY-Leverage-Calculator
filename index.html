@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #080c10; --panel: #0d1117; --panel2: #111820; --border: #1a2332; --border2: #243040;
+  --text: #cdd9e5; --muted: #4a6070; --bright: #e6edf3;
+  --cyan: #39d0d8; --cyan-dim: rgba(57,208,216,0.12); --cyan-glow: rgba(57,208,216,0.25);
+  --green: #3fb950; --green-dim: rgba(63,185,80,0.1);
+  --red: #f85149; --red-dim: rgba(248,81,73,0.1);
+  --amber: #e3b341; --amber-dim: rgba(227,179,65,0.1); --amber-glow: rgba(227,179,65,0.25);
+}
+body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; min-height: 100vh; padding: 32px 16px 80px; display: flex; flex-direction: column; align-items: center; }
+body::after { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none; z-index: 100; }
+.container { width: 100%; max-width: 640px; }
+header { margin-bottom: 28px; animation: slideDown 0.5s ease both; }
+.header-top { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 8px; }
+h1 { font-family: 'Bebas Neue', sans-serif; font-size: 52px; letter-spacing: 0.05em; line-height: 1; color: var(--bright); }
+h1 em { color: var(--cyan); font-style: normal; }
+.version { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; padding-bottom: 6px; }
+.header-sub { display: flex; align-items: center; gap: 16px; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.dir-switch { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 14px; animation: slideDown 0.5s 0.05s ease both; }
+.dir-btn { padding: 12px; border: none; background: transparent; color: var(--muted); font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; position: relative; }
+.dir-btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: transparent; transition: background 0.2s; }
+.dir-btn.long.active { color: var(--green); background: var(--green-dim); }
+.dir-btn.long.active::after { background: var(--green); }
+.dir-btn.short.active { color: var(--red); background: var(--red-dim); }
+.dir-btn.short.active::after { background: var(--red); }
+.dir-btn:hover:not(.active) { color: var(--text); background: var(--panel2); }
+.section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 12px; animation: slideDown 0.5s ease both; position: relative; overflow: hidden; }
+.section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border2), transparent); }
+.section:nth-child(3){animation-delay:0.05s} .section:nth-child(4){animation-delay:0.1s} .section:nth-child(5){animation-delay:0.15s}
+.sec-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.sec-label::before { content: '//'; color: var(--cyan); font-size: 11px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.input-box { position: relative; display: flex; align-items: center; }
+.sym { position: absolute; left: 10px; font-size: 12px; color: var(--muted); pointer-events: none; z-index: 1; }
+input[type=number] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--bright); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; padding: 10px 10px 10px 26px; outline: none; transition: border-color 0.18s, box-shadow 0.18s; -moz-appearance: textfield; }
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type=number]:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan-dim); }
+input[type=number]::placeholder { color: var(--border2); }
+.risk-indicator { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 10px; color: var(--muted); }
+.risk-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.risk-bar-fill { height: 100%; width: 0%; border-radius: 2px; background: var(--green); transition: width 0.3s, background 0.3s; }
+.risk-pct-label { min-width: 38px; text-align: right; }
+.calc-btn { width: 100%; padding: 16px; background: var(--cyan); border: none; border-radius: 6px; color: var(--bg); font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.15em; cursor: pointer; transition: all 0.2s; margin-top: 4px; position: relative; overflow: hidden; animation: slideDown 0.5s 0.2s ease both; }
+.calc-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%); transform: translateX(-100%); transition: transform 0.5s; }
+.calc-btn:hover { background: #4de0e8; box-shadow: 0 0 24px var(--cyan-glow); }
+.calc-btn:hover::before { transform: translateX(100%); }
+.calc-btn:active { transform: scale(0.99); }
+.error { display: none; background: var(--red-dim); border: 1px solid rgba(248,81,73,0.3); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--red); margin-top: 10px; letter-spacing: 0.04em; }
+.error.show { display: block; }
+.results { display: none; flex-direction: column; gap: 12px; margin-top: 12px; animation: fadeUp 0.4s ease both; }
+.results.show { display: flex; }
+.divider { display: flex; align-items: center; gap: 12px; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.sbox { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px 10px; text-align: center; }
+.sbox-label { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.sbox-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.04em; line-height: 1; }
+.sbox-val.c{color:var(--cyan)} .sbox-val.g{color:var(--green)} .sbox-val.r{color:var(--red)} .sbox-val.a{color:var(--amber)}
+.pnl-table { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.pnl-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.pnl-row:last-child { border-bottom: none; }
+.pnl-row:hover { background: var(--panel2); }
+.pnl-row .lbl { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; }
+.pnl-row .val { font-weight: 600; letter-spacing: 0.02em; }
+.pnl-row .val.g{color:var(--green)} .pnl-row .val.r{color:var(--red)} .pnl-row .val.c{color:var(--cyan)} .pnl-row .val.w{color:var(--bright)} .pnl-row .val.a{color:var(--amber)}
+.pnl-row-head { background: var(--panel2); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.lev-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lev-card { border-radius: 8px; padding: 20px 16px; text-align: center; position: relative; overflow: hidden; }
+.lev-card::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.01) 20px); pointer-events: none; }
+.lev-card.r3 { background: linear-gradient(160deg, rgba(57,208,216,0.1), rgba(57,208,216,0.03)); border: 1px solid rgba(57,208,216,0.35); }
+.lev-card.r4 { background: linear-gradient(160deg, rgba(227,179,65,0.1), rgba(227,179,65,0.03)); border: 1px solid rgba(227,179,65,0.35); }
+.lev-top-bar { height: 3px; border-radius: 1px; margin-bottom: 14px; position: relative; z-index: 1; }
+.r3 .lev-top-bar { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.r4 .lev-top-bar { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.lev-rrr { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 8px; position: relative; z-index: 1; }
+.r3 .lev-rrr{color:var(--cyan)} .r4 .lev-rrr{color:var(--amber)}
+.lev-num { font-family: 'Bebas Neue', sans-serif; font-size: 52px; line-height: 1; letter-spacing: 0.02em; margin-bottom: 0; position: relative; z-index: 1; }
+.r3 .lev-num { color: var(--cyan); text-shadow: 0 0 20px var(--cyan-glow); }
+.r4 .lev-num { color: var(--amber); text-shadow: 0 0 20px var(--amber-glow); }
+.lev-x { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 300; vertical-align: super; opacity: 0.7; }
+.lev-desc { font-size: 9px; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; position: relative; z-index: 1; }
+.lev-details { background: rgba(0,0,0,0.3); border-radius: 5px; padding: 10px; font-size: 10px; line-height: 1.8; text-align: left; position: relative; z-index: 1; }
+.lev-details .dd { display: flex; justify-content: space-between; }
+.lev-details .dk { color: var(--muted); }
+.lev-details .dv { font-weight: 500; }
+.r3 .lev-details .dv{color:var(--cyan)} .r4 .lev-details .dv{color:var(--amber)}
+.profit-highlight { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); }
+.profit-highlight .dv { color: var(--green) !important; font-size: 12px; font-weight: 600; }
+.reset-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.06em; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; transition: all 0.2s; }
+.reset-btn:hover { border-color: var(--border2); color: var(--text); }
+@keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@media(max-width:480px){ .row-2,.lev-cards{grid-template-columns:1fr} .summary-grid{grid-template-columns:repeat(2,1fr)} h1{font-size:40px} }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-top">
+      <h1>TRADE<em>CALC</em></h1>
+      <div class="version">v2.0</div>
+    </div>
+    <div class="header-sub">
+      <div class="dot"></div>
+      POSITION SIZING · LEVERAGE · RISK/REWARD
+    </div>
+  </header>
+
+  <div class="dir-switch">
+    <button class="dir-btn long active" id="longBtn" onclick="setDir('long')">▲ LONG</button>
+    <button class="dir-btn short" id="shortBtn" onclick="setDir('short')">▼ SHORT</button>
+  </div>
+
+  <div class="section">
+    <div class="sec-label">Account Capital</div>
+    <div class="row-2">
+      <div class="field">
+        <label>Total Account Capital</label>
+        <div class="input-box"><span class="sym">$</span><input type="number" id="capital" placeholder="e.g. 10000" min="0" step="any" oninput="updateRiskBar()"></div>
+      </div>
+      <div class="field">
+        <label>Amount to Risk on Trade</label>
+        <div class="input-box"><span class="sym">$</span><input type="number" id="riskAmt" placeholder="e.g. 500" min="0" step="any" oninput="updateRiskBar()"></div>
+      </div>
+    </div>
+    <div class="risk-indicator">
+      <span>RISK</span>
+      <div class="risk-bar-wrap"><div class="risk-bar-fill" id="riskBarFill"></div></div>
+      <span class="risk-pct-label" id="riskPctLabel">—</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-label">Trade Prices</div>
+    <div class="row-2">
+      <div class="field">
+        <label>Entry Price</label>
+        <div class="input-box"><span class="sym">$</span><input type="number" id="entry" placeholder="e.g. 65000" min="0" step="any"></div>
+      </div>
+      <div class="field">
+        <label>Stop Loss Price</label>
+        <div class="input-box"><span class="sym">$</span><input type="number" id="stopLoss" placeholder="e.g. 63500" min="0" step="any"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-label">Take Profit (Your Target)</div>
+    <div class="field">
+      <label>Take Profit Price</label>
+      <div class="input-box"><span class="sym">$</span><input type="number" id="takeProfit" placeholder="e.g. 70000" min="0" step="any"></div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">CALCULATE POSITION</button>
+  <div class="error" id="errorMsg"></div>
+
+  <div class="results" id="results">
+    <div class="divider">Trade Summary</div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="divider">Profit &amp; Loss Breakdown</div>
+    <div class="pnl-table" id="pnlTable"></div>
+    <div class="divider">Required Leverage</div>
+    <div class="lev-cards" id="levCards"></div>
+    <button class="reset-btn" onclick="resetCalc()">↺ &nbsp;RESET CALCULATOR</button>
+  </div>
+</div>
+
+<script>
+let direction = 'long';
+function setDir(d) {
+  direction = d;
+  document.getElementById('longBtn').classList.toggle('active', d==='long');
+  document.getElementById('shortBtn').classList.toggle('active', d==='short');
+}
+function updateRiskBar() {
+  const cap = parseFloat(document.getElementById('capital').value);
+  const risk = parseFloat(document.getElementById('riskAmt').value);
+  const fill = document.getElementById('riskBarFill');
+  const label = document.getElementById('riskPctLabel');
+  if (!cap || !risk || cap <= 0) { fill.style.width='0%'; label.textContent='—'; return; }
+  const pct = (risk/cap)*100;
+  fill.style.width = Math.min(pct,100)+'%';
+  fill.style.background = pct<=2 ? 'var(--green)' : pct<=5 ? 'var(--amber)' : 'var(--red)';
+  label.textContent = pct.toFixed(1)+'%';
+}
+function f(n,d=2){ return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fc(n){ return '$'+f(Math.abs(n)); }
+
+function calculate() {
+  const capital = parseFloat(document.getElementById('capital').value);
+  const riskAmt = parseFloat(document.getElementById('riskAmt').value);
+  const entry   = parseFloat(document.getElementById('entry').value);
+  const sl      = parseFloat(document.getElementById('stopLoss').value);
+  const tp      = parseFloat(document.getElementById('takeProfit').value);
+  const err = document.getElementById('errorMsg');
+  err.classList.remove('show');
+
+  if ([capital,riskAmt,entry,sl,tp].some(isNaN)) { err.textContent='⚠ Please fill in all five fields.'; err.classList.add('show'); return; }
+  if ([capital,riskAmt,entry,sl,tp].some(v=>v<=0)) { err.textContent='⚠ All values must be greater than zero.'; err.classList.add('show'); return; }
+  if (riskAmt > capital) { err.textContent='⚠ Risk amount cannot exceed total capital.'; err.classList.add('show'); return; }
+  if (direction==='long') {
+    if (sl>=entry){ err.textContent='⚠ Stop loss must be BELOW entry for a long.'; err.classList.add('show'); return; }
+    if (tp<=entry){ err.textContent='⚠ Take profit must be ABOVE entry for a long.'; err.classList.add('show'); return; }
+  } else {
+    if (sl<=entry){ err.textContent='⚠ Stop loss must be ABOVE entry for a short.'; err.classList.add('show'); return; }
+    if (tp>=entry){ err.textContent='⚠ Take profit must be BELOW entry for a short.'; err.classList.add('show'); return; }
+  }
+
+  const slDist = Math.abs(entry - sl);
+  const tpDist = Math.abs(tp - entry);
+  const slPct  = slDist / entry;
+  const tpPct  = tpDist / entry;
+  const rrActual = tpDist / slDist;
+
+  // positionSize * slPct = riskAmt  =>  positionSize = riskAmt / slPct
+  const positionSize = riskAmt / slPct;
+  const leverage = positionSize / capital;
+
+  const profitActual = riskAmt * rrActual;
+  const profit3 = riskAmt * 3;
+  const profit4 = riskAmt * 4;
+
+  const tp3 = direction==='long' ? entry + slDist*3 : entry - slDist*3;
+  const tp4 = direction==='long' ? entry + slDist*4 : entry - slDist*4;
+
+  const riskPct = (riskAmt/capital)*100;
+  const profActualPct = (profitActual/capital)*100;
+  const prof3Pct = (profit3/capital)*100;
+  const prof4Pct = (profit4/capital)*100;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="sbox"><div class="sbox-label">SL Distance</div><div class="sbox-val r">${f(slPct*100,2)}%</div></div>
+    <div class="sbox"><div class="sbox-label">TP Distance</div><div class="sbox-val g">${f(tpPct*100,2)}%</div></div>
+    <div class="sbox"><div class="sbox-label">Actual R:R</div><div class="sbox-val c">1:${f(rrActual,2)}</div></div>
+    <div class="sbox"><div class="sbox-label">Risk %</div><div class="sbox-val a">${f(riskPct,2)}%</div></div>
+  `;
+
+  document.getElementById('pnlTable').innerHTML = `
+    <div class="pnl-row-head">Position Details</div>
+    <div class="pnl-row"><span class="lbl">Total Account Capital</span><span class="val w">${fc(capital)}</span></div>
+    <div class="pnl-row"><span class="lbl">Amount Risked</span><span class="val r">−${fc(riskAmt)} (${f(riskPct,1)}% of account)</span></div>
+    <div class="pnl-row"><span class="lbl">Required Position Size</span><span class="val c">${fc(positionSize)}</span></div>
+    <div class="pnl-row"><span class="lbl">Required Leverage</span><span class="val c">${f(leverage,2)}×</span></div>
+    <div class="pnl-row-head">Outcomes</div>
+    <div class="pnl-row"><span class="lbl">Max Loss (stop hit)</span><span class="val r">−${fc(riskAmt)}</span></div>
+    <div class="pnl-row"><span class="lbl">Profit at Your TP &nbsp;[1:${f(rrActual,1)}]</span><span class="val g">+${fc(profitActual)} (${f(profActualPct,1)}%)</span></div>
+    <div class="pnl-row"><span class="lbl">Profit at 1:3 TP</span><span class="val g">+${fc(profit3)} (${f(prof3Pct,1)}%)</span></div>
+    <div class="pnl-row"><span class="lbl">Profit at 1:4 TP</span><span class="val a">+${fc(profit4)} (${f(prof4Pct,1)}%)</span></div>
+  `;
+
+  document.getElementById('levCards').innerHTML = `
+    <div class="lev-card r3">
+      <div class="lev-top-bar"></div>
+      <div class="lev-rrr">1 : 3 Risk / Reward</div>
+      <div class="lev-num">${f(leverage,1)}<span class="lev-x">×</span></div>
+      <div class="lev-desc">leverage required</div>
+      <div class="lev-details">
+        <div class="dd"><span class="dk">Stop Loss</span><span class="dv">${fc(sl)}</span></div>
+        <div class="dd"><span class="dk">TP Target</span><span class="dv">${fc(tp3)}</span></div>
+        <div class="dd"><span class="dk">TP Move</span><span class="dv">${f(slPct*3*100,2)}%</span></div>
+        <div class="dd profit-highlight"><span class="dk">Profit</span><span class="dv">+${fc(profit3)}</span></div>
+      </div>
+    </div>
+    <div class="lev-card r4">
+      <div class="lev-top-bar"></div>
+      <div class="lev-rrr">1 : 4 Risk / Reward</div>
+      <div class="lev-num">${f(leverage,1)}<span class="lev-x">×</span></div>
+      <div class="lev-desc">leverage required</div>
+      <div class="lev-details">
+        <div class="dd"><span class="dk">Stop Loss</span><span class="dv">${fc(sl)}</span></div>
+        <div class="dd"><span class="dk">TP Target</span><span class="dv">${fc(tp4)}</span></div>
+        <div class="dd"><span class="dk">TP Move</span><span class="dv">${f(slPct*4*100,2)}%</span></div>
+        <div class="dd profit-highlight"><span class="dk">Profit</span><span class="dv">+${fc(profit4)}</span></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('results').classList.add('show');
+  setTimeout(()=>{ document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'}); }, 50);
+}
+
+function resetCalc() {
+  ['capital','riskAmt','entry','stopLoss','takeProfit'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('errorMsg').classList.remove('show');
+  document.getElementById('riskBarFill').style.width='0%';
+  document.getElementById('riskPctLabel').textContent='—';
+  setDir('long');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
